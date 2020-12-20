@@ -1,6 +1,6 @@
 # day02-clj
 
-FIXME: description
+AOC2020: day 2
 
 ## Installation
 
