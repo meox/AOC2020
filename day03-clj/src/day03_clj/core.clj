@@ -40,18 +40,20 @@
   (= (select-tree map-tree col row) 1))
 
 (defun count-tree
-  ([map-tree] (count-tree map-tree (count map-tree) [0 0] 0))
-  ([map-tree 0 coord num-tree] num-tree)
-  ([map-tree n coord num-tree]
-    (let [col (first coord)
-          row (second coord)
-          next-col (+ col 3)
-          next-row (inc row)]
-      (count-tree
+  ([map-tree slope] (count-tree map-tree slope (count map-tree) [0 0] 0))
+  ([map-tree slope n coord num-tree]
+    (let [[col row] coord
+          [dx dy] slope
+          next-col (+ col dx)
+          next-row (+ row dy)]
+      (if (<= n 0)
+        num-tree
+        (count-tree
         map-tree
-        (dec n)
+        slope
+        (- n dy)
         [next-col next-row]
-        (if (is-tree? map-tree col row) (inc num-tree) num-tree)))))
+        (if (is-tree? map-tree col row) (inc num-tree) num-tree))))))
 
 
 (defn -main
