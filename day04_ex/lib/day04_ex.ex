@@ -33,4 +33,21 @@ defmodule Day04Ex do
   def is_valid_passport(%{byr: _, iyr: _, eyr: _, hgt: _, hcl: _, ecl: _, pid: _, cid: _}), do: true
   def is_valid_passport(%{byr: _, iyr: _, eyr: _, hgt: _, hcl: _, ecl: _, pid: _}), do: true
   def is_valid_passport(%{}), do: false
+
+  def load_input() do
+    case File.read("./data/input.txt") do
+      {:ok, body}      ->
+        body
+        |> String.split("\n\n")
+        |> Enum.map(fn ls -> ls |> String.replace("\n", " ") end)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  def count_valid_passports(passports) do
+    passports
+    |> Enum.map(&parse_credentials/1)
+    |> Enum.filter(&is_valid_passport/1)
+    |> Enum.count()
+  end
 end
