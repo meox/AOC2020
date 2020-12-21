@@ -2,7 +2,15 @@ defmodule Day04Ex do
   @moduledoc """
   Documentation for `Day04Ex`.
   """
+  @doc """
+  Parse a credentials
 
+  ## Examples
+
+    iex> Day04Ex.parse_credentials("byr:1937 iyr:2017 cid:147 hgt:183cm")
+    %{byr: "1937", iyr: "2017", cid: "147", hgt: "183cm"}
+
+  """
   def parse_credentials(line) do
     line
     |> String.split()
@@ -22,6 +30,7 @@ defmodule Day04Ex do
     |> Enum.into(%{})
   end
 
-  def is_valid_passport(%{:byr}), do: :no
-  def is_valid_passport(%{}), do: :no
+  def is_valid_passport(%{byr: _, iyr: _, eyr: _, hgt: _, hcl: _, ecl: _, pid: _, cid: _}), do: true
+  def is_valid_passport(%{byr: _, iyr: _, eyr: _, hgt: _, hcl: _, ecl: _, pid: _}), do: true
+  def is_valid_passport(%{}), do: false
 end
