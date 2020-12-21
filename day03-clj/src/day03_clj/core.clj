@@ -49,11 +49,11 @@
       (if (<= n 0)
         num-tree
         (count-tree
-        map-tree
-        slope
-        (- n dy)
-        [next-col next-row]
-        (if (is-tree? map-tree col row) (inc num-tree) num-tree))))))
+          map-tree
+          slope
+          (- n dy)
+          [next-col next-row]
+          (if (is-tree? map-tree col row) (inc num-tree) num-tree))))))
 
 
 (defn -main
