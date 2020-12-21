@@ -46,21 +46,27 @@ defmodule Day04Ex do
     valid_birth(byr) &&
       valid_year(iyr) &&
       valid_expir(eyr) &&
-      valid_height(hgt)
+      valid_height(hgt) &&
+      valid_hair_color(hcl) &&
+      valid_eye_color(ecl) &&
+      valid_pid(pid)
   end
 
   def valid_birth(:error), do: false
-  def valid_birth({n, _}), do: n >= 1920 && n <= 2020
+  def valid_birth({n, ""}), do: n >= 1920 && n <= 2002
+  def valid_birth(_), do: false
 
   def valid_year(:error), do: false
-  def valid_year({n, _}), do: n >= 2010 && n <= 2020
+  def valid_year({n, ""}), do: n >= 2010 && n <= 2020
+  def valid_year(_), do: false
 
   def valid_expir(:error), do: false
-  def valid_expir({n, _}), do: n >= 2020 && n <= 2030
+  def valid_expir({n, ""}), do: n >= 2020 && n <= 2030
+  def valid_expir(_), do: false
 
   def valid_height(hgt) do
-    with %{"v" => v, "u" => u} <- Regex.named_captures(~r/(?<v>\d+)(?<u>cm|in)/, hgt),
-         {x, _} <- Integer.parse(v) do
+    with %{"v" => v, "u" => u} <- Regex.named_captures(~r/^(?<v>\d+)(?<u>cm|in)$/, hgt),
+         {x, ""} <- Integer.parse(v) do
       case u do
         "cm" -> x >= 150 && x <= 193
         "in" -> x >= 59 && x <= 76
@@ -70,6 +76,23 @@ defmodule Day04Ex do
       _ -> false
     end
   end
+
+  def valid_hair_color(hcl) do
+    Regex.match?(~r/^#[0-9,a-f]{6}$/, hcl)
+  end
+
+  def valid_pid(pid) do
+    Regex.match?(~r/^[0-9]{9}$/, pid)
+  end
+
+  def valid_eye_color("amb"), do: true
+  def valid_eye_color("blu"), do: true
+  def valid_eye_color("brn"), do: true
+  def valid_eye_color("gry"), do: true
+  def valid_eye_color("grn"), do: true
+  def valid_eye_color("hzl"), do: true
+  def valid_eye_color("oth"), do: true
+  def valid_eye_color(_), do: false
 
   def load_input() do
     case File.read("./data/input.txt") do
