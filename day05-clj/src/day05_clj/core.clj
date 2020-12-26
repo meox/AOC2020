@@ -35,8 +35,19 @@
   (with-open [rdr (clojure.java.io/reader "./data/input.txt")]
     (doall (line-seq rdr))))
 
-(defn highest-seat-id [rows]
-  (apply max (map (fn [x] (seat-id (calc-rowcol x))) rows)))
+(def seat-list
+  (sort (map (fn [x] (seat-id (calc-rowcol x))) load-input)))
+
+(def highest-seat-id
+  (apply max seat-list))
+
+(defn find-my-seat [seats expected]
+  (if
+    (= (first seats) expected)
+    (find-my-seat (rest seats) (inc expected))
+    expected))
+
+(def my-seat (find-my-seat seat-list (first seat-list)))
 
 (defn -main
   "I don't do a whole lot ... yet."
