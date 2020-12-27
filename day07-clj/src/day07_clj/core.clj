@@ -25,11 +25,11 @@
   (let [parts (string/split s #" bags contain ")
         bags  (parse-contains (second parts))
         name  (first parts)]
-    [name bags]))
+    {:name name, :contain bags}))
 
 (defn parse-rules [rules]
   (reduce
-    (fn [acc x] (assoc acc (first x) (second x)))
+    (fn [acc x] (assoc acc (x :name) (x :contain)))
     {}
     (map parse-rule rules)))
 
@@ -38,6 +38,36 @@
     (doall (line-seq rdr))))
 
 (def rules (parse-rules (load-input "./data/mini.txt")))
+
+(defn contained [vs] (map (fn [m] (m :name)) vs))
+
+(defn store-into [acc x keys]
+  (reduce
+    (fn [acc k]
+      (let [cs (acc k)]
+        (assoc acc k (conj cs x))))
+    acc
+    keys))
+
+(defn invert-index [rules]
+  (reduce
+    (fn [acc x]
+      (let [name (first x)
+            vs  (contained (second x))]
+        (store-into acc name vs)))
+    {}
+    rules))
+
+(defn enum-bags [index bag]
+  (let [containers (index bag)]
+    (clojure.set/union
+      (set containers)
+      (set
+        (mapcat
+          (fn [x] (enum-bags index x))
+          containers)))))
+
+(defn count-bags [index bag] (count (enum-bags index bag)))
 
 (defn -main
   "I don't do a whole lot ... yet."
