@@ -37,7 +37,7 @@
   (with-open [rdr (clojure.java.io/reader fname)]
     (doall (line-seq rdr))))
 
-(def rules (parse-rules (load-input "./data/mini.txt")))
+(def rules (parse-rules (load-input "./data/input.txt")))
 
 (defn contained [vs] (map (fn [m] (m :name)) vs))
 
@@ -68,6 +68,18 @@
           containers)))))
 
 (defn count-bags [index bag] (count (enum-bags index bag)))
+
+(defn count-bags-inside [bag rules]
+  (let [vs (rules bag)]
+    (if
+      (empty? vs)
+      0
+      (apply +
+        (map
+          (fn [x] (let [name (x :name)
+                        q    (x :quantity)]
+                  (* q (inc (count-bags-inside name rules)))))
+          vs)))))
 
 (defn -main
   "I don't do a whole lot ... yet."
