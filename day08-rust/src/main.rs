@@ -56,7 +56,7 @@ fn compile(istrs: Vec<String>) -> Result<Vec<Op>, InvalidInstr> {
     return Ok(ops);
 }
 
-fn execute(ops: Vec<Op>, mut ctx: Ctx) -> (Ctx, bool) {
+fn execute(ops: &Vec<Op>, mut ctx: Ctx) -> (Ctx, bool) {
     let mut visited: HashSet<usize> = HashSet::new();
 
     loop {
@@ -133,18 +133,18 @@ fn main() {
     let bin = compile(instrs).unwrap();
     //println!("compiled = {:?}", bin);
 
-    let r = execute(bin.clone(), Ctx{ acc: 0, ip: 0 });
+    let r = execute(&bin, Ctx{ acc: 0, ip: 0 });
     println!("VM: {:?}", r);
 
     // second part
     // 1. change all jmp in nop (step by step)
     let len = bin.len();
     for i in 0..len {
-        let mut copy_bin = bin.clone();
-        if let Op::JMP(v) = copy_bin[i] {
-            copy_bin[i] = Op::NOP(v);
+        let mut modified_bin = bin.clone();
+        if let Op::JMP(v) = modified_bin[i] {
+            modified_bin[i] = Op::NOP(v);
             // try to execute
-            let (r, terminated) = execute(copy_bin, Ctx{ acc: 0, ip: 0 });
+            let (r, terminated) = execute(&modified_bin, Ctx{ acc: 0, ip: 0 });
             if terminated {
                 println!("Patched: JMP -> NOP, IP:{} {:?}", i, r);
                 return
@@ -154,11 +154,11 @@ fn main() {
 
     // 2. change all nop in jump (step by step)
     for i in 0..len {
-        let mut copy_bin = bin.clone();
-        if let Op::NOP(v) = copy_bin[i] {
-            copy_bin[i] = Op::JMP(v);
+        let mut modified_bin = bin.clone();
+        if let Op::NOP(v) = modified_bin[i] {
+            modified_bin[i] = Op::JMP(v);
             // try to execute
-            let (r, terminated) = execute(copy_bin, Ctx{ acc: 0, ip: 0 });
+            let (r, terminated) = execute(&modified_bin, Ctx{ acc: 0, ip: 0 });
             if terminated {
                 println!("Patched: NOP -> JMP, IP:{} {:?}", i, r);
                 return
