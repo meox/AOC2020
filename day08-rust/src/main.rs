@@ -1,5 +1,8 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
 
 #[derive(Debug, Clone)]
 enum Op {
@@ -41,11 +44,11 @@ fn parse_instruction(s: &str) -> Op {
     }
 }
 
-fn compile(istrs: Vec<&str>) -> Result<Vec<Op>, InvalidInstr> {
+fn compile(istrs: Vec<String>) -> Result<Vec<Op>, InvalidInstr> {
     let mut ops: Vec<Op> = Vec::new();
 
     for istr in istrs {
-        let opcode = parse_instruction(istr);
+        let opcode = parse_instruction(&istr);
         match opcode {
             Op::INVALID(line) => return Err(InvalidInstr { msg: line }),
             _ => ops.push(opcode),
@@ -85,13 +88,46 @@ fn execute(ops: Vec<Op>, mut ctx: Ctx) -> Ctx {
     return ctx;
 }
 
+
+fn load_fromfile(fname: &str) -> Vec<String> {
+    let mut instrs: Vec<String> = Vec::new();
+
+    if let Ok(lines) = read_lines(fname) {
+        // Consumes the iterator, returns an (Optional) String
+        for line in lines {
+            if let Ok(instr) = line {
+                instrs.push(instr);
+            }
+        }
+    }
+
+    instrs
+}
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
+
 fn main() {
     // println!("result = {:?}", parse_instruction("nop +0"));
     // println!("result = {:?}", parse_instruction("acc +5"));
     // println!("result = {:?}", parse_instruction("jmp -5"));
     // println!("result = {:?}", parse_instruction("xxx +5"));
-    let instrs: Vec<&str> = vec!["nop +0", "acc +5", "jmp -2"];
+    // let instrs: Vec<&str> = vec![
+    //     "nop +0",
+    //     "acc +1",
+    //     "jmp +4",
+    //     "acc +3",
+    //     "jmp -3",
+    //     "acc -99",
+    //     "acc +1",
+    //     "jmp -4",
+    //     "acc +6",
+    // ];
 
+    let instrs = load_fromfile("data/input.txt");
     let bin = compile(instrs).unwrap();
     println!("compiled = {:?}", bin);
 
