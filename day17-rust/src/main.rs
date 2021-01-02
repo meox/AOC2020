@@ -16,10 +16,11 @@ struct Position {
     x: i32,
     y: i32,
     z: i32,
+    w: i32,
 }
 impl PartialEq for Position {
     fn eq(&self, other: &Self) -> bool {
-        self.x == other.x && self.y == other.y && self.z == other.z
+        self.x == other.x && self.y == other.y && self.z == other.z && self.w == other.w
     }
 }
 impl Hash for Position {
@@ -27,6 +28,7 @@ impl Hash for Position {
         self.x.hash(state);
         self.y.hash(state);
         self.z.hash(state);
+        self.w.hash(state);
     }
 }
 
@@ -41,6 +43,7 @@ struct Pocket {
     rx: Range,
     ry: Range,
     rz: Range,
+    rw: Range,
     grid: HashMap<Position, State>,
 }
 
@@ -68,15 +71,16 @@ impl Pocket {
             rx: Range { min: 0, max: 0 },
             ry: Range { min: 0, max: 0 },
             rz: Range { min: 0, max: 0 },
+            rw: Range { min: 0, max: 0 },
         }
     }
-    fn add_cube(&mut self, x: i32, y: i32, z: i32, state: State) {
-        let pos = Position { x, y, z };
+    fn add_cube(&mut self, x: i32, y: i32, z: i32, w: i32, state: State) {
+        let pos = Position { x, y, z, w };
         self.grid.insert(pos, state);
     }
 
-    fn get_state(&self, x: i32, y: i32, z: i32) -> State {
-        if let Some(&state) = self.grid.get(&Position { x, y, z }) {
+    fn get_state(&self, x: i32, y: i32, z: i32, w: i32) -> State {
+        if let Some(&state) = self.grid.get(&Position { x, y, z, w }) {
             return state;
         }
         return State::Inactive;
@@ -92,6 +96,7 @@ impl Pocket {
                 self.rx.min = pos.x; self.rx.max = pos.x;
                 self.ry.min = pos.y; self.ry.max = pos.y;
                 self.rz.min = pos.z; self.rz.max = pos.z;
+                self.rw.min = pos.w; self.rz.max = pos.w;
                 not_init = false;
                 continue;
             }
@@ -104,6 +109,9 @@ impl Pocket {
             if pos.z < self.rz.min {
                 self.rz.min = pos.z;
             }
+            if pos.w < self.rw.min {
+                self.rw.min = pos.w;
+            }
             if pos.x > self.rx.max {
                 self.rx.max = pos.x;
             }
@@ -112,6 +120,9 @@ impl Pocket {
             }
             if pos.z > self.rz.max {
                 self.rz.max = pos.z;
+            }
+            if pos.w > self.rw.max {
+                self.rw.max = pos.w;
             }
         }
     }
@@ -126,22 +137,25 @@ impl Pocket {
         })
     }
 
-    fn neighbors(&self, pos: Position) -> Vec<Cube> {
+    fn neighbors(&self, pos: &Position) -> Vec<Cube> {
         let mut v: Vec<Cube> = Vec::new();
-        for dz in -1..=1 {
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    let x = pos.x + dx;
-                    let y = pos.y + dy;
-                    let z = pos.z + dz;
+        for dw in -1..=1 {
+            for dz in -1..=1 {
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        let x = pos.x + dx;
+                        let y = pos.y + dy;
+                        let z = pos.z + dz;
+                        let w = pos.w + dw;
 
-                    if x == pos.x && y == pos.y && z == pos.z {
-                        continue;
+                        if x == pos.x && y == pos.y && z == pos.z && w == pos.w {
+                            continue;
+                        }
+                        v.push(Cube {
+                            pos: Position { x, y, z, w },
+                            state: self.get_state(x, y, z, w),
+                        });
                     }
-                    v.push(Cube {
-                        pos: Position { x, y, z },
-                        state: self.get_state(x, y, z),
-                    });
                 }
             }
         }
@@ -153,11 +167,11 @@ impl Pocket {
 
         for (pos, state) in &self.grid {
             // update the state for the current cube
-            let neighbors = self.neighbors(*pos);
+            let neighbors = self.neighbors(pos);
             new_pocket.set_state(*pos, new_state(*state, &neighbors));
             // now update the status for the neighbors
             neighbors.iter().for_each(|cube| {
-                let local_neighbors = self.neighbors(cube.pos);
+                let local_neighbors = self.neighbors(&cube.pos);
                 new_pocket.set_state(cube.pos, new_state(cube.state, &local_neighbors));
             });
         }
@@ -171,24 +185,26 @@ impl fmt::Display for Pocket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut vs: Vec<String> = Vec::new();
 
-        for z in self.rz.min..=self.rz.max {
-            vs.push(fmt::format(format_args!("z={}\n", z)));
-            for y in self.ry.min..=self.ry.max {
-                for x in self.rx.min..=self.rx.max {
-                    let pos = Position { x, y, z };
-                    if let Some(&state) = self.grid.get(&pos) {
-                        if state == State::Active {
-                            vs.push("#".to_owned())
+        for w in self.rw.min..=self.rw.max {
+            for z in self.rz.min..=self.rz.max {
+                vs.push(fmt::format(format_args!("z={} w={}\n", z, w)));
+                for y in self.ry.min..=self.ry.max {
+                    for x in self.rx.min..=self.rx.max {
+                        let pos = Position { x, y, z, w };
+                        if let Some(&state) = self.grid.get(&pos) {
+                            if state == State::Active {
+                                vs.push("#".to_owned())
+                            } else {
+                                vs.push(".".to_owned())
+                            }
                         } else {
                             vs.push(".".to_owned())
                         }
-                    } else {
-                        vs.push(".".to_owned())
                     }
+                    vs.push("\n".to_owned());
                 }
                 vs.push("\n".to_owned());
             }
-            vs.push("\n".to_owned());
         }
 
         write!(f, "{}", vs.join(""))
@@ -199,6 +215,7 @@ fn load_fromfile(fname: &str) -> Pocket {
     let mut pocket: Pocket = Pocket::new();
 
     let z = 0;
+    let w = 0;
     let mut y = 0;
     if let Ok(lines) = read_lines(fname) {
         // Consumes the iterator, returns an (Optional) String
@@ -207,10 +224,10 @@ fn load_fromfile(fname: &str) -> Pocket {
                 let mut x = 0;
                 for c in line.split("") {
                     if c == "#" {
-                        pocket.add_cube(x, y, z, State::Active);
+                        pocket.add_cube(x, y, z, w, State::Active);
                         x += 1;
                     } else if c == "." {
-                        pocket.add_cube(x, y, z, State::Inactive);
+                        pocket.add_cube(x, y, z, w, State::Inactive);
                         x += 1;
                     }
                 }
