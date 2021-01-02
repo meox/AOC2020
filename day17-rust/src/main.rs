@@ -85,45 +85,35 @@ impl Pocket {
         }
         return State::Inactive;
     }
+
     fn set_state(&mut self, pos: Position, new_state: State) {
         self.grid.insert(pos, new_state);
     }
-    fn update_ranges(&mut self) {
-        let mut not_init = true;
 
-        for (pos, _) in &self.grid {
-            if not_init {
-                self.rx.min = pos.x; self.rx.max = pos.x;
-                self.ry.min = pos.y; self.ry.max = pos.y;
-                self.rz.min = pos.z; self.rz.max = pos.z;
-                self.rw.min = pos.w; self.rz.max = pos.w;
-                not_init = false;
-                continue;
-            }
-            if pos.x < self.rx.min {
-                self.rx.min = pos.x;
-            }
-            if pos.y < self.ry.min {
-                self.ry.min = pos.y;
-            }
-            if pos.z < self.rz.min {
-                self.rz.min = pos.z;
-            }
-            if pos.w < self.rw.min {
-                self.rw.min = pos.w;
-            }
-            if pos.x > self.rx.max {
-                self.rx.max = pos.x;
-            }
-            if pos.y > self.ry.max {
-                self.ry.max = pos.y;
-            }
-            if pos.z > self.rz.max {
-                self.rz.max = pos.z;
-            }
-            if pos.w > self.rw.max {
-                self.rw.max = pos.w;
-            }
+    fn update_ranges(&mut self, pos: &Position) {
+        if pos.x < self.rx.min {
+            self.rx.min = pos.x;
+        }
+        if pos.y < self.ry.min {
+            self.ry.min = pos.y;
+        }
+        if pos.z < self.rz.min {
+            self.rz.min = pos.z;
+        }
+        if pos.w < self.rw.min {
+            self.rw.min = pos.w;
+        }
+        if pos.x > self.rx.max {
+            self.rx.max = pos.x;
+        }
+        if pos.y > self.ry.max {
+            self.ry.max = pos.y;
+        }
+        if pos.z > self.rz.max {
+            self.rz.max = pos.z;
+        }
+        if pos.w > self.rw.max {
+            self.rw.max = pos.w;
         }
     }
 
@@ -169,13 +159,14 @@ impl Pocket {
             // update the state for the current cube
             let neighbors = self.neighbors(pos);
             new_pocket.set_state(*pos, new_state(*state, &neighbors));
+            new_pocket.update_ranges(pos);
             // now update the status for the neighbors
             neighbors.iter().for_each(|cube| {
                 let local_neighbors = self.neighbors(&cube.pos);
                 new_pocket.set_state(cube.pos, new_state(cube.state, &local_neighbors));
+                new_pocket.update_ranges(&cube.pos);
             });
         }
-        new_pocket.update_ranges();
         new_pocket
     }
 }
@@ -217,6 +208,7 @@ fn load_fromfile(fname: &str) -> Pocket {
     let z = 0;
     let w = 0;
     let mut y = 0;
+    let mut max_x = 0;
     if let Ok(lines) = read_lines(fname) {
         // Consumes the iterator, returns an (Optional) String
         for raw_line in lines {
@@ -230,12 +222,16 @@ fn load_fromfile(fname: &str) -> Pocket {
                         pocket.add_cube(x, y, z, w, State::Inactive);
                         x += 1;
                     }
+                    if max_x < x {
+                        max_x = x;
+                    }
                 }
                 y += 1;
             }
         }
     }
-    pocket.update_ranges();
+    pocket.rx.max = max_x;
+    pocket.ry.max = y;
     pocket
 }
 
