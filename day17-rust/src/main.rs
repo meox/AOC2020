@@ -44,18 +44,21 @@ struct Pocket {
     grid: HashMap<Position, State>,
 }
 
+#[derive(Debug)]
 struct Cube {
     pos: Position,
     state: State,
 }
 
-fn new_state(vs: &Vec<Cube>) -> State {
+fn new_state(current_state: State, vs: &Vec<Cube>) -> State {
     let active_neighbors = vs.iter().filter(|&x| x.state == State::Active).count();
-    if active_neighbors == 2 || active_neighbors == 3 {
-        State::Active
-    } else {
-        State::Inactive
+    if current_state == State::Active && (active_neighbors == 2 || active_neighbors == 3) {
+        return State::Active;
     }
+    if current_state == State::Inactive && active_neighbors == 3 {
+        return State::Active;
+    }
+    State::Inactive
 }
 
 impl Pocket {
@@ -72,52 +75,62 @@ impl Pocket {
         self.grid.insert(pos, state);
     }
 
-    fn get(&self, x: i32, y: i32, z: i32) -> State {
+    fn get_state(&self, x: i32, y: i32, z: i32) -> State {
         if let Some(&state) = self.grid.get(&Position { x, y, z }) {
             return state;
         }
         return State::Inactive;
     }
-    fn set(&mut self, pos: Position, new_state: State) {
+    fn set_state(&mut self, pos: Position, new_state: State) {
         self.grid.insert(pos, new_state);
     }
     fn update_ranges(&mut self) {
         let mut not_init = true;
-        let mut rx = Range { max: 0, min: 0 };
-        let mut ry = Range { max: 0, min: 0 };
-        let mut rz = Range { max: 0, min: 0 };
 
         for (pos, _) in &self.grid {
-            if not_init || pos.x < rx.min {
-                rx.min = pos.x;
+            if not_init {
+                self.rx.min = pos.x; self.rx.max = pos.x;
+                self.ry.min = pos.y; self.ry.max = pos.y;
+                self.rz.min = pos.z; self.rz.max = pos.z;
+                not_init = false;
+                continue;
             }
-            if not_init || pos.y < ry.min {
-                ry.min = pos.y;
+            if pos.x < self.rx.min {
+                self.rx.min = pos.x;
             }
-            if not_init || pos.z < rz.min {
-                rz.min = pos.z;
+            if pos.y < self.ry.min {
+                self.ry.min = pos.y;
             }
-            if not_init || pos.x > rx.max {
-                rx.max = pos.x;
+            if pos.z < self.rz.min {
+                self.rz.min = pos.z;
             }
-            if not_init || pos.y > ry.max {
-                ry.max = pos.y;
+            if pos.x > self.rx.max {
+                self.rx.max = pos.x;
             }
-            if not_init || pos.z > rz.max {
-                rz.max = pos.z;
+            if pos.y > self.ry.max {
+                self.ry.max = pos.y;
             }
-            not_init = false;
+            if pos.z > self.rz.max {
+                self.rz.max = pos.z;
+            }
         }
-        self.rx = rx;
-        self.ry = ry;
-        self.rz = rz;
+    }
+
+    fn count_active(self) -> u32 {
+        self.grid.iter().fold(0, |acc, (_, &state)| {
+            if state == State::Active {
+                acc + 1
+            } else {
+                acc
+            }
+        })
     }
 
     fn neighbors(&self, pos: Position) -> Vec<Cube> {
         let mut v: Vec<Cube> = Vec::new();
-        for dz in -1..1 {
-            for dy in -1..1 {
-                for dx in -1..1 {
+        for dz in -1..=1 {
+            for dy in -1..=1 {
+                for dx in -1..=1 {
                     let x = pos.x + dx;
                     let y = pos.y + dy;
                     let z = pos.z + dz;
@@ -127,7 +140,7 @@ impl Pocket {
                     }
                     v.push(Cube {
                         pos: Position { x, y, z },
-                        state: self.get(x, y, z),
+                        state: self.get_state(x, y, z),
                     });
                 }
             }
@@ -138,18 +151,17 @@ impl Pocket {
     fn cycle(&self) -> Pocket {
         let mut new_pocket: Pocket = Pocket::new();
 
-        for (pos, _) in &self.grid {
+        for (pos, state) in &self.grid {
             // update the state for the current cube
             let neighbors = self.neighbors(*pos);
-            new_pocket.set(*pos, new_state(&neighbors));
+            new_pocket.set_state(*pos, new_state(*state, &neighbors));
             // now update the status for the neighbors
             neighbors.iter().for_each(|cube| {
                 let local_neighbors = self.neighbors(cube.pos);
-                new_pocket.set(*pos, new_state(&local_neighbors));
+                new_pocket.set_state(cube.pos, new_state(cube.state, &local_neighbors));
             });
         }
         new_pocket.update_ranges();
-
         new_pocket
     }
 }
@@ -159,10 +171,10 @@ impl fmt::Display for Pocket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut vs: Vec<String> = Vec::new();
 
-        for z in self.rz.min..self.rz.max {
+        for z in self.rz.min..=self.rz.max {
             vs.push(fmt::format(format_args!("z={}\n", z)));
-            for y in self.ry.min..self.ry.max {
-                for x in self.rx.min..self.rx.max {
+            for y in self.ry.min..=self.ry.max {
+                for x in self.rx.min..=self.rx.max {
                     let pos = Position { x, y, z };
                     if let Some(&state) = self.grid.get(&pos) {
                         if state == State::Active {
@@ -194,12 +206,13 @@ fn load_fromfile(fname: &str) -> Pocket {
             if let Ok(line) = raw_line {
                 let mut x = 0;
                 for c in line.split("") {
-                    let mut state: State = State::Inactive;
                     if c == "#" {
-                        state = State::Active;
+                        pocket.add_cube(x, y, z, State::Active);
+                        x += 1;
+                    } else if c == "." {
+                        pocket.add_cube(x, y, z, State::Inactive);
+                        x += 1;
                     }
-                    pocket.add_cube(x, y, z, state);
-                    x += 1;
                 }
                 y += 1;
             }
@@ -219,11 +232,12 @@ where
 
 fn main() {
     let mut pocket = load_fromfile("./data/input.txt");
+    println!("Pocket:\n{}", pocket);
 
-    println!("Pocket:\n{:?}", pocket);
-
-    for i in 0..1 {
+    for _ in 0..6 {
         pocket = pocket.cycle();
-        println!("round {}:\n{}", i + 1, pocket);
+        //println!("round {}:\n{}", i + 1, pocket);
     }
+
+    println!("cube active: {}", pocket.count_active());
 }
