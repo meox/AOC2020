@@ -28,6 +28,36 @@
 (defn part1 [xs]
   (apply * (map (fn [e] (second e)) xs)))
 
+(defn is-in? [x xs]
+  (if
+    (empty? xs)
+    false
+    (let [h  (first xs)
+          rs (rest xs)]
+      (if (= h x) true (is-in? x rs)))))
+
+(defn sub-tree [xs v]
+  (drop (.indexOf xs v) xs))
+
+(defn possible-sub-trees [xs vs]
+  (map (fn [v] (sub-tree xs v)) vs))
+
+; TODO: missing memoization
+(defn jolt-tree [xs]
+  (if
+    (= (count xs) 1)
+    1
+    (let [h  (first xs)
+          rs (rest xs)
+          ps (list (+ 1 h) (+ 2 h) (+ 3 h))
+          vs (filter (fn [x] (is-in? x rs)) ps)
+          ts (possible-sub-trees rs vs)]
+      (apply + (map jolt-tree ts)))))
+
+(defn part2 [xs]
+  (let [jlist (setup-list xs)]
+    (jolt-tree jlist)))
+
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
