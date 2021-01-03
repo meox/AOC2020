@@ -25,6 +25,9 @@
     (group-by identity)
     (map (fn [e] [(first e) (count (second e))]))))
 
+(defn part1 [xs]
+  (apply * (map (fn [e] (second e)) xs)))
+
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
