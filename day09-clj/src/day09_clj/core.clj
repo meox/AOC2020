@@ -39,6 +39,46 @@
 (def input
   (map (fn [x] (biginteger x)) (load-input "./data/input.txt")))
 
+(defn index-invalid [xs invalid]
+  (.indexOf xs invalid))
+
+(defn tks [xs s]
+  (loop [nxs (drop s xs)
+         l   (count nxs)
+         acc []]
+    (if
+      (> l 0)
+      (let [tk   (take l nxs)
+            nacc (cons tk acc)
+            nl   (dec l)]
+        (recur nxs nl nacc))
+      acc)))
+
+(defn tokenize [xs]
+  (filter
+    (fn [x] (> (count x) 1))
+    (mapcat
+      (fn [s] (tks xs s))
+      (range 0 (count xs)))))
+
+(defn minimal-set [xs preamble-len]
+  (let [invalid     (first (find-invalid xs preamble-len))
+        idx-invalid (index-invalid xs invalid)
+        cs          (take idx-invalid xs)
+        all-subset  (tokenize cs)]
+    (first
+      (filter
+        (fn [es] (= invalid (second es)))
+        (map
+          (fn [xs] [xs (apply + xs)])
+          all-subset)))))
+
+(defn part2 [xs preamble-len]
+  (let [mset (first (minimal-set xs preamble-len))
+        vmax (apply max mset)
+        vmin (apply min mset)]
+    (+ vmax vmin)))
+
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
