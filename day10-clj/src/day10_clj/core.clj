@@ -42,7 +42,6 @@
 (defn possible-sub-trees [xs vs]
   (map (fn [v] (sub-tree xs v)) vs))
 
-; TODO: missing memoization
 (defn jolt-tree [xs]
   (if
     (= (count xs) 1)
@@ -54,9 +53,36 @@
           ts (possible-sub-trees rs vs)]
       (apply + (map jolt-tree ts)))))
 
+
+(def not-nil? (complement nil?))
+
+; (dfs-jolt-tree (setup-list mini) 0 {})
+(defn dfs-jolt-tree [xs acc visited]
+  (if
+    (= (count xs) 1)
+    [(inc acc) visited]
+    (let [h         (first xs)
+          rs        (rest xs)
+          nexts     (list (+ 1 h) (+ 2 h) (+ 3 h))
+          childrens (filter (fn [x] (is-in? x rs)) nexts)]
+      (reduce
+        (fn [state x]
+          (let [[nacc c-visited] state
+                val              (c-visited x)]
+            (if
+              (not-nil? val)
+              [(+ nacc val) c-visited]
+              (let [tree   (sub-tree rs x)
+                    result (dfs-jolt-tree tree nacc c-visited)
+                    facc   (+ nacc (first result))
+                    fv     (assoc (second result) x (first result))]
+                [facc fv]))))
+        [acc visited]
+        childrens))))
+
 (defn part2 [xs]
   (let [jlist (setup-list xs)]
-    (jolt-tree jlist)))
+    (first (dfs-jolt-tree jlist 0 {}))))
 
 (defn -main
   "I don't do a whole lot ... yet."
