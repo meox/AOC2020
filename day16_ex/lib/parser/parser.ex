@@ -1,17 +1,20 @@
 defmodule InputParser do
-  def parse() do
+  def parse(file_name) do
     {_, result} =
-      read_input()
+      file_name
+      |> read_input()
       |> Enum.filter(&(&1 != ""))
       |> Enum.reduce(
-        {:parse_rules, %{rules: [], my_ticket: "", nearby: []}},
+        {:parse_rules, %{rules: %{}, my_ticket: "", nearby: []}},
         fn
           "your ticket:", {:parse_rules, acc} ->
             {:parse_ticket, acc}
 
           x, {:parse_rules, acc} ->
-            parsed_rule = parse_rule(x)
-            {:parse_rules, Map.update(acc, :rules, [parsed_rule], fn v -> [parsed_rule | v] end)}
+            {name, range} = parse_rule(x)
+
+            {:parse_rules,
+             Map.update(acc, :rules, %{name => range}, fn v -> Map.put(v, name, range) end)}
 
           x, {:parse_ticket, acc} ->
             {:parse_nearby, Map.put(acc, :my_ticket, parse_ticket(x))}
@@ -30,8 +33,8 @@ defmodule InputParser do
     result
   end
 
-  defp read_input() do
-    "input.txt"
+  defp read_input(file_name) do
+    file_name
     |> File.read!()
     |> String.split("\n")
   end
