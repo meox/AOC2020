@@ -1,31 +1,78 @@
 defmodule InputParser do
   def parse() do
-    read_input()
-    |> Enum.filter(&(&1 == ""))
-    |> Enum.reduce(
-      {:parse_rules, %{rules: [], my_ticket: "", nearby: []}},
-      fn
-        {:parse_rules, acc}, "your ticket:" ->
-          {:parse_ticket, acc}
+    {_, result} =
+      read_input()
+      |> Enum.filter(&(&1 != ""))
+      |> Enum.reduce(
+        {:parse_rules, %{rules: [], my_ticket: "", nearby: []}},
+        fn
+          "your ticket:", {:parse_rules, acc} ->
+            {:parse_ticket, acc}
 
-        {:parse_rules, acc}, x ->
-          {:parse_rules, Map.update(acc, :rules, [x], fn v -> [x | v] end)}
+          x, {:parse_rules, acc} ->
+            parsed_rule = parse_rule(x)
+            {:parse_rules, Map.update(acc, :rules, [parsed_rule], fn v -> [parsed_rule | v] end)}
 
-        {:parse_ticket, acc}, x ->
-          {:parse_nearby, Map.put(acc, :my_ticket, x)}
+          x, {:parse_ticket, acc} ->
+            {:parse_nearby, Map.put(acc, :my_ticket, parse_ticket(x))}
 
-        {:parse_nearby, acc}, "nearby tickets:" ->
-          {:parse_nearby, acc}
+          "nearby tickets:", {:parse_nearby, acc} ->
+            {:parse_nearby, acc}
 
-        {:parse_nearby, acc}, x ->
-          {:parse_nearby, Map.update(acc, :nearby, [x], fn v -> [x | v] end)}
-      end
-    )
+          x, {:parse_nearby, acc} ->
+            parsed_ticket = parse_ticket(x)
+
+            {:parse_nearby,
+             Map.update(acc, :nearby, [parsed_ticket], fn v -> [parsed_ticket | v] end)}
+        end
+      )
+
+    result
   end
 
-  def read_input() do
+  defp read_input() do
     "input.txt"
     |> File.read!()
     |> String.split("\n")
+  end
+
+  # "zone: 39-786 or 807-969"
+  @spec parse_rule(String.t()) :: any()
+  defp parse_rule(rule) do
+    [name, vs] =
+      rule
+      |> String.split(":")
+      |> Enum.map(&String.trim(&1))
+
+    ranges =
+      vs
+      |> String.split("or")
+      |> Enum.map(&String.trim(&1))
+      |> Enum.map(fn r ->
+        [min, max] =
+          r
+          |> String.split("-")
+          |> Enum.map(&Integer.parse(&1))
+          |> Enum.filter(fn
+            {_num, ""} -> true
+            _ -> false
+          end)
+          |> Enum.map(fn {num, _} -> num end)
+
+        {min, max}
+      end)
+
+    {name, ranges}
+  end
+
+  defp parse_ticket(ticket) do
+    ticket
+    |> String.split(",")
+    |> Enum.map(&Integer.parse(&1))
+    |> Enum.filter(fn
+      {_num, ""} -> true
+      _ -> false
+    end)
+    |> Enum.map(fn {num, _} -> num end)
   end
 end
